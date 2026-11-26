@@ -7,7 +7,26 @@ const revocation = require("../lib/token-revocation");
 // Normalises an IP before it is used as a rate-limit key. See aiLimiter below.
 const { ipKeyGenerator } = require("express-rate-limit");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dhown_mes_jwt_secret_2026';
+// SECURITY (remediation SEC-2): FAIL CLOSED. Never fall back to a built-in JWT
+// secret. A secret written in source — and this history is public — would let
+// anyone forge a token for any role. If JWT_SECRET is missing we refuse to start
+// rather than run with a guessable default; and we reject the former built-in
+// value outright, since it is now public and must be rotated.
+const JWT_SECRET = process.env.JWT_SECRET;
+const FORMER_BUILTIN_JWT_SECRET = 'dhown_mes_jwt_secret_2026';
+if (!JWT_SECRET || !JWT_SECRET.trim()) {
+  throw new Error(
+    'JWT_SECRET is not set. Refusing to start: the server will not fall back to a ' +
+    'built-in secret (which would let anyone forge tokens). Set a strong, random ' +
+    'JWT_SECRET in the environment.'
+  );
+}
+if (JWT_SECRET === FORMER_BUILTIN_JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET is set to the former built-in value, which is now public. Rotate it ' +
+    'to a strong, random secret before starting.'
+  );
+}
 
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
 
