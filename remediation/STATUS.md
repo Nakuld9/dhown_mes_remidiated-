@@ -17,11 +17,11 @@
 | C | Data ownership matrix | ✅ draft | `01_DATA_OWNERSHIP_MATRIX.md` |
 | — | BUSY 21 integration feasibility | 🔄 to re-issue (ACE-OLEDB findings) | `02_BUSY_INTEGRATION_FEASIBILITY.md` |
 | — | Approved workflow map (A–F) | ⏳ pending | `03_WORKFLOW_MAP.md` |
-| D | Code retirement register | ⏳ pending | `04_CODE_RETIREMENT_REGISTER.md` |
+| D | Code retirement register | ✅ draft | `04_CODE_RETIREMENT_REGISTER.md` |
 | E | Database schema & migration risks | ✅ draft | `05_DATABASE_FINDINGS.md` |
 | — | Repeatable clean-DB provision procedure (item 4) | ✅ scaffold (blocked on baseline DDL) | `backend/scripts/db-provision.js` |
 | G | Test & build baseline | ✅ done | `06_TEST_BASELINE.md` |
-| F | Independent security review (GET-only, scratch DB) | ⏳ pending | `07_SECURITY_FINDINGS.md` |
+| F | Independent security review (static; runtime pending) | ✅ draft | `07_SECURITY_FINDINGS.md` |
 | H | Prioritised remediation backlog | ⏳ pending | `08_REMEDIATION_BACKLOG.md` |
 | I | Consolidated findings + implementation plan | ⏳ pending | `09_FINDINGS_AND_PLAN.md` |
 
