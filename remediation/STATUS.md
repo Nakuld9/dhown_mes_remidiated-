@@ -19,7 +19,7 @@
 | — | Approved workflow map (A–F) | ⏳ pending | `03_WORKFLOW_MAP.md` |
 | D | Code retirement register | ⏳ pending | `04_CODE_RETIREMENT_REGISTER.md` |
 | E | Database schema & migration risks | ⏳ pending | `05_DATABASE_FINDINGS.md` |
-| G | Test & build baseline | ⏳ pending | `06_TEST_BASELINE.md` |
+| G | Test & build baseline | ✅ done | `06_TEST_BASELINE.md` |
 | F | Independent security review (GET-only, scratch DB) | ⏳ pending | `07_SECURITY_FINDINGS.md` |
 | H | Prioritised remediation backlog | ⏳ pending | `08_REMEDIATION_BACKLOG.md` |
 | I | Consolidated findings + implementation plan | ⏳ pending | `09_FINDINGS_AND_PLAN.md` |
@@ -34,6 +34,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending
 - Security checks: **GET-only, against an isolated scratch DB** — never the live server.
 
 ## Change log
+- **2026-11-26 (2)** — Test & build baseline (G): `npm install` green; **unit 252/252 pass**; 2 self-provisioning e2e suites pass on an isolated scratch Postgres. Found a **reproducibility defect**: no from-zero schema bootstrap (~35 e2e suites can't run headlessly). No live system touched.
 - **2026-11-26** — Branch `claude/mes-busy-remediation` created from `a8ef1bb`. Faithful mirror of `main` + `claude/dhown-busy-bridge` pushed & SHA-verified. `server-refractor` excluded (leaked Groq key + stale). Provenance (B), status tracker, and Data Ownership Matrix (C draft) committed.
 
 ## Open items awaiting your input
