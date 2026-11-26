@@ -91,6 +91,10 @@ const LEGACY_FIRST = ['migration_erp_phase0a.js','migration_erp_phase0b.js','mig
   catch (e) { mark('import-schema.ensure', 'FAIL', String(e.message).slice(0, 100)); }
   try { await require(path.join(BACKEND, 'src', 'lib', 'accounting', 'schema')).ensureAccountingSchema(pool); mark('acct.ensure', 'OK'); }
   catch (e) { mark('acct.ensure', 'FAIL', String(e.message).slice(0, 100)); }
+  // Seed the default admin (same step server.js runs at boot) so the DB has a
+  // usable SUPER_ADMIN login. Password from ADMIN_DEFAULT_PASSWORD, else random.
+  try { await require(path.join(BACKEND, 'src', 'db', 'schema')).seedDefaultAdmin(); mark('seedDefaultAdmin', 'OK'); }
+  catch (e) { mark('seedDefaultAdmin', 'FAIL', String(e.message).slice(0, 100)); }
 
   // Summary.
   const r = await pool.query(`SELECT count(*)::int n FROM information_schema.tables WHERE table_schema='public'`);
