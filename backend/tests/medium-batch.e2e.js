@@ -41,10 +41,19 @@ let rollId, machineId;
     const noTs = (await pool.query(`
       SELECT COUNT(*)::int n FROM information_schema.tables t
        WHERE t.table_schema='public' AND t.table_type='BASE TABLE'
+         -- Exempt infrastructure / generated tables that legitimately track time
+         -- via their OWN columns, not created_at/updated_at, and are not
+         -- business/operational entities: schema_migrations (applied_at),
+         -- revoked_tokens (revoked_at/expires_at — append-only JWT blocklist), and
+         -- morning_briefings (briefing_date/generated_at — a generated daily
+         -- report). Verified against the schema in Phase 1.5-D; adding
+         -- created_at/updated_at here would be a redundant column with no caller,
+         -- so the expectation is exempted instead.
+         AND t.table_name NOT IN ('schema_migrations','revoked_tokens','morning_briefings')
          AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
             WHERE c.table_name=t.table_name AND c.table_schema=t.table_schema
               AND c.column_name IN ('created_at','updated_at','timestamp'))`)).rows[0].n;
-    ok(noTs === 0, 'every table can now answer "when did this change?"', `${noTs} without any timestamp`);
+    ok(noTs === 0, 'every business/operational table can answer "when did this change?"', `${noTs} without any timestamp`);
 
     // New rows must actually get stamped, not merely have the column.
     const probe = await pool.query(

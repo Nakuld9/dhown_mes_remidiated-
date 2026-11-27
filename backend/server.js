@@ -11,7 +11,7 @@ const PDFDocument = require("pdfkit");
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { seedDefaultAdmin, ensureProductionHistory, ensureMaintenanceSchema, ensureUsersSchema, ensureOperatorsSchema, ensurePurchaseOrdersSchema, ensureSalesOrdersSchema, ensureProductionPlansSchema, ensurePayrollSchema, ensureTaxInvoicesSchema, ensureAlertAcksSchema, ensureCollectorRollSchema, ensureWaCrmSchema, ensureLogisticsSchema, ensureAllocationSchema, ensureUomSchema, ensureFinancialViews, ensureReferenceData, ensureFinancialConstraints, ensureKnittingSchema, ensureBankReconSchema, ensureSoftDelete, ensureComplaintsSchema, ensureOrderLineWeights, ensureBusyProductionSchema, ensureFabricInspectionSchema, ensureAiAgentsSchema, ensureAiApprovalsSchema, ensureCapaSchema, ensureShadeSwatchesSchema, ensureTimestamps, ensureCheckConstraints, ensureForeignKeyIndexes } = require('./src/db/schema');
+const { seedDefaultAdmin, ensureProductionHistory, ensureMaintenanceSchema, ensureUsersSchema, ensureOperatorsSchema, ensurePurchaseOrdersSchema, ensureSalesOrdersSchema, ensureProductionPlansSchema, ensurePayrollSchema, ensureTaxInvoicesSchema, ensureAlertAcksSchema, ensureCollectorRollSchema, ensureWaCrmSchema, ensureLogisticsSchema, ensureAllocationSchema, ensureUomSchema, ensureFinancialViews, ensureReferenceData, ensureFinancialConstraints, ensureKnittingSchema, ensureBankReconSchema, ensureSoftDelete, ensureComplaintsSchema, ensureOrderLineWeights, ensureBusyProductionSchema, ensureFabricInspectionSchema, ensureAiAgentsSchema, ensureAiApprovalsSchema, ensureCapaSchema, ensureShadeSwatchesSchema, ensureTimestamps, ensureCheckConstraints, ensureForeignKeyIndexes, ensureFinishedGoodsSchema } = require('./src/db/schema');
 const { getShiftSettings, detectCurrentShift } = require('./src/lib/shift');
 const { computeLiveStatus, updateOEE } = require('./src/lib/machine');
 const { nextSeq, nextInvSeq, nextDocNumber } = require('./src/lib/sequences');
@@ -983,6 +983,7 @@ server.listen(APP_PORT, async () => {
   // After partners exists — complaints reference it.
   await ensureComplaintsSchema();
   await ensureOrderLineWeights();
+  await ensureFinishedGoodsSchema();
   await ensureBusyProductionSchema();
   // After rolls + app_settings exist — fabric inspection references the roll and
   // reads its grading thresholds from settings.

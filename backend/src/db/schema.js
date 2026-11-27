@@ -2464,4 +2464,18 @@ async function ensureReferenceData() {
   }
 }
 
-module.exports = { seedDefaultAdmin, ensureProductionHistory, ensureMaintenanceSchema, ensureUsersSchema, ensureOperatorsSchema, ensurePurchaseOrdersSchema, ensureSalesOrdersSchema, ensureProductionPlansSchema, ensurePayrollSchema, ensureTaxInvoicesSchema, ensureAlertAcksSchema, ensureCollectorRollSchema, ensureWaCrmSchema, ensureLogisticsSchema, ensureAllocationSchema, ensureUomSchema, ensureFinancialViews, ensureReferenceData, ensureFinancialConstraints, ensureKnittingSchema, ensureBankReconSchema, ensureSoftDelete, SOFT_DELETE_TABLES, ensureComplaintsSchema, ensureOrderLineWeights, ensureBusyProductionSchema, ensureFabricInspectionSchema, ensureAiAgentsSchema, ensureAiApprovalsSchema, ensureCapaSchema, ensureShadeSwatchesSchema, ensureTimestamps, ensureCheckConstraints, ensureForeignKeyIndexes };
+// Reconcile finished_goods for manual finished-entry. The roll_id column (the
+// generated FG-<date>-Mnnn identifier) is written by src/lib/finished-entry.js
+// but is absent from the recovered July baseline; its type matches rolls.roll_id
+// (VARCHAR(50)). Nullable, because only MANUAL-source finished-goods rows set it.
+// Idempotent (ADD COLUMN IF NOT EXISTS).
+async function ensureFinishedGoodsSchema() {
+  try {
+    await pool.query(`ALTER TABLE finished_goods ADD COLUMN IF NOT EXISTS roll_id VARCHAR(50)`);
+    console.log('Finished-goods roll_id ready');
+  } catch (err) {
+    console.error('ensureFinishedGoodsSchema error:', err.message);
+  }
+}
+
+module.exports = { seedDefaultAdmin, ensureProductionHistory, ensureMaintenanceSchema, ensureUsersSchema, ensureOperatorsSchema, ensurePurchaseOrdersSchema, ensureSalesOrdersSchema, ensureProductionPlansSchema, ensurePayrollSchema, ensureTaxInvoicesSchema, ensureAlertAcksSchema, ensureCollectorRollSchema, ensureWaCrmSchema, ensureLogisticsSchema, ensureAllocationSchema, ensureUomSchema, ensureFinancialViews, ensureReferenceData, ensureFinancialConstraints, ensureKnittingSchema, ensureBankReconSchema, ensureSoftDelete, SOFT_DELETE_TABLES, ensureComplaintsSchema, ensureOrderLineWeights, ensureBusyProductionSchema, ensureFabricInspectionSchema, ensureAiAgentsSchema, ensureAiApprovalsSchema, ensureCapaSchema, ensureShadeSwatchesSchema, ensureTimestamps, ensureCheckConstraints, ensureForeignKeyIndexes, ensureFinishedGoodsSchema };

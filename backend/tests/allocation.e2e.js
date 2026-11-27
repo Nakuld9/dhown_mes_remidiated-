@@ -217,7 +217,8 @@ const ok = (cond, msg, extra = '') => {
 
     console.log('\nUnit conversion');
     const itemId = (await pool.query(
-      `INSERT INTO items (item_code, item_name, category_id, uom_id) VALUES ($1,$2,$3,1) RETURNING item_id`,
+      `INSERT INTO items (item_code, item_name, category_id, uom_id)
+       VALUES ($1,$2,$3,(SELECT uom_id FROM uom WHERE code='MTR' LIMIT 1)) RETURNING item_id`,
       ['ZZI' + tag, 'ZZ Fabric ' + tag, CAT])).rows[0].item_id;
     made.items.push(itemId);
     // 180 GSM at 150 cm open width -> 1 metre weighs 1.5 * 180 / 1000 = 0.27 kg
@@ -238,7 +239,8 @@ const ok = (cond, msg, extra = '') => {
     ok(noItem.code === 400, 'kg to metres without an item is refused, not guessed');
 
     const bare = (await pool.query(
-      `INSERT INTO items (item_code, item_name, category_id, uom_id) VALUES ($1,$2,$3,1) RETURNING item_id`,
+      `INSERT INTO items (item_code, item_name, category_id, uom_id)
+       VALUES ($1,$2,$3,(SELECT uom_id FROM uom WHERE code='MTR' LIMIT 1)) RETURNING item_id`,
       ['ZZB' + tag, 'ZZ No Spec ' + tag, CAT])).rows[0].item_id;
     made.items.push(bare);
     const noSpec = await uom.convert({ item_id: bare, from_uom: 'MTR', to_uom: 'KG', quantity: 10 });

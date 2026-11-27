@@ -45,6 +45,12 @@ async function seedDispatch({ gstin, priced }) {
 
 (async () => {
   try {
+    // Deterministic test fixture (Phase 1.5-C): our company home state = Punjab
+    // (code 03), the documented DHOWN / VD-Knits location. INTRA vs INTER is
+    // decided by comparing the customer GSTIN prefix to app_settings.key='state';
+    // when unset, every supply reads INTRA. Documented value, not production data.
+    await pool.query(`INSERT INTO app_settings (key, value) VALUES ('state','Punjab')
+                      ON CONFLICT (key) DO UPDATE SET value='Punjab'`);
     // 1. A priced, same-state (Punjab 03) dispatch → DRAFT invoice, INTRA, linked.
     const d1 = await seedDispatch({ gstin: '03ZZAAAA1234Z1', priced: true });
     const r1 = await invoicer.fromDispatch(d1, 'zz');

@@ -23,7 +23,7 @@ const FAB = 'ZZ Finished ' + Date.now().toString().slice(-5);
     console.log('\nEntering finished rolls creates finished stock');
     const out = await entry.create({ fabric_type: FAB, color_name: 'Navy', lot_no: 'ZZLOT1', rolls: [{ weight_kg: 40 }, { weight_kg: 42 }] }, 'tester');
     ok(out.ok && out.rolls === 2 && out.total_kg === 82, 'two finished rolls recorded, 82 kg', `${out.rolls}/${out.total_kg}`);
-    createdIds.push(...out.created.map(c => c.roll_id));
+    createdIds.push(...(out.created || []).map(c => c.roll_id));  // guard: on a create error (out.created undefined) fail cleanly, don't crash
 
     const stock = (await pool.query(
       `SELECT COUNT(*) n, COALESCE(SUM(weight_kg),0) kg FROM finished_goods WHERE fabric_type=$1 AND source='MANUAL'`, [FAB])).rows[0];

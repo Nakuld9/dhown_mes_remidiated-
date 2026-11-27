@@ -72,19 +72,45 @@ const sign = (b, secret = SECRET) => 'sha256=' + crypto.createHmac('sha256', sec
     'a malformed signature header is refused (401)');
 
   // ── 2. AI reachability ─────────────────────────────────────────────────────
-  console.log('\nAI draft engine reachability (live Groq call)');
+  // AI draft path — Groq TRANSPORT IS MOCKED here (Phase 1.5-B controlled
+  // fixture): no live api.groq.com call and NO production credentials. This
+  // exercises callGroq's real request-build + response-parse against a canned
+  // completion, verifying the webhook→AI-draft path without an external service.
+  // Live Groq reachability is an ops/runtime concern, not a clean-DB test concern.
   require('dotenv').config({ quiet: true });
+  console.log('\nAI draft engine (Groq transport MOCKED — no live call, no credentials)');
+  const { EventEmitter } = require('events');
+  const https = require('https');
+  const realGroqRequest = https.request;
+  const prevKey = process.env.GROQ_API_KEY;
+  process.env.GROQ_API_KEY = prevKey || 'test-mock-key-not-a-real-credential';
+  https.request = (options, cb) => {
+    if (options && options.hostname === 'api.groq.com') {
+      const res = new EventEmitter();
+      process.nextTick(() => {
+        res.emit('data', JSON.stringify({ choices: [{ message: { content: 'Yes — we knit single jersey fabric.' } }] }));
+        res.emit('end');
+      });
+      cb(res);
+      const req = new EventEmitter();
+      req.setTimeout = () => {}; req.write = () => {}; req.end = () => {}; req.destroy = () => {};
+      return req;
+    }
+    return realGroqRequest(options, cb);
+  };
   const { callGroq } = require('../src/lib/ai');
-  ok(!!process.env.GROQ_API_KEY, 'GROQ_API_KEY is configured');
+  ok(!!process.env.GROQ_API_KEY, 'GROQ_API_KEY present (mock value in tests)');
   let reply = '';
   try {
     reply = await callGroq(
       'You are a knitting-mill sales assistant. Answer in one short sentence.',
       'A customer asks: do you make single jersey fabric?');
   } catch (e) { reply = 'THREW: ' + e.message; }
+  https.request = realGroqRequest;
+  if (prevKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = prevKey;
   const usable = typeof reply === 'string' && reply.length > 0 &&
     !/GROQ_API_KEY not set/i.test(reply) && !/^THREW:/.test(reply);
-  ok(usable, 'Groq returns a usable draft (the AI that answers customers responds)',
+  ok(usable, 'webhook→AI-draft path produces a usable draft (Groq transport MOCKED)',
     usable ? `→ "${reply.slice(0, 70).replace(/\n/g, ' ')}…"` : `→ "${reply.slice(0, 90)}"`);
 
   console.log(fails ? `\n${fails} FAILED\n` : '\nAll checks passed — the webhook gate and AI draft engine are sound.\n');

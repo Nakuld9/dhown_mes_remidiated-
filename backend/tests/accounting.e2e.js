@@ -34,6 +34,16 @@ const D = '2026-10-01';
 (async () => {
   // Fresh acct schema on the scratch DB.
   await pool.query('DROP SCHEMA IF EXISTS acct CASCADE');
+  // Deterministic test fixture (Phase 1.5-C): this suite posts on 2026-10-01 and
+  // expects FY "26-27" (voucher JV/26-27/...). Ensure that financial year exists
+  // before acct schema build (acct.periods derive from public.financial_years).
+  // Fixed Indian-FY dates — not production data, not business-approved config.
+  await pool.query(`INSERT INTO public.financial_years (label, start_date, end_date, is_active, is_closed)
+                    SELECT '2026-27','2026-04-01','2027-03-31', true, false
+                    WHERE NOT EXISTS (SELECT 1 FROM public.financial_years WHERE label='2026-27')`);
+  // Make FY 26-27 the single active year (it is the current Indian FY). Opening
+  // balances and postings resolve against the active FY, so this aligns them.
+  await pool.query(`UPDATE public.financial_years SET is_active = (label='2026-27')`);
   const cid = await ensureAccountingSchema(pool);
   await ensureAccountingSchema(pool); // idempotent second run
   const svc = require('../src/lib/accounting/service')(pool);

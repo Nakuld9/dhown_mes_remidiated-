@@ -41,7 +41,7 @@ const ENSURE_ORDER = [
   'ensureTaxInvoicesSchema','ensureAlertAcksSchema','ensureCollectorRollSchema','ensureWaCrmSchema',
   'ensureLogisticsSchema','ensureAllocationSchema','ensureUomSchema','ensureFinancialViews',
   'ensureReferenceData','ensureKnittingSchema','ensureFinancialConstraints','ensureBankReconSchema',
-  'ensureSoftDelete','ensureComplaintsSchema','ensureOrderLineWeights','ensureBusyProductionSchema',
+  'ensureSoftDelete','ensureComplaintsSchema','ensureOrderLineWeights','ensureFinishedGoodsSchema','ensureBusyProductionSchema',
   'ensureFabricInspectionSchema','ensureAiAgentsSchema','ensureAiApprovalsSchema','ensureCapaSchema',
   'ensureShadeSwatchesSchema','ensureTimestamps','ensureCheckConstraints','ensureForeignKeyIndexes',
 ];
@@ -95,6 +95,29 @@ const LEGACY_FIRST = ['migration_erp_phase0a.js','migration_erp_phase0b.js','mig
   // usable SUPER_ADMIN login. Password from ADMIN_DEFAULT_PASSWORD, else random.
   try { await require(path.join(BACKEND, 'src', 'db', 'schema')).seedDefaultAdmin(); mark('seedDefaultAdmin', 'OK'); }
   catch (e) { mark('seedDefaultAdmin', 'FAIL', String(e.message).slice(0, 100)); }
+
+  // Additional boot-time provisioners that server.js runs after the ensures, so
+  // the clean DB matches a booted app instead of relying on startup side effects.
+  // wa-approvals.seedDefaults seeds the documented default approval matrix.
+  const lib = (...p) => require(path.join(BACKEND, 'src', 'lib', ...p));
+  const bootSteps = [
+    ['audit.ensure',            () => lib('audit')(pool).ensure()],
+    ['busy-bridge.ensure',      () => lib('busy-bridge')(pool).ensure()],
+    ['wa-campaigns.ensure',     () => lib('wa-campaigns')({ pool, sendTemplate: async () => ({}), consent: {} }).ensure()],
+    ['error-tracker.ensure',    () => lib('error-tracker')(pool).ensure()],
+    ['ci.ensure',               () => lib('ci')(pool).ensure()],
+    ['loans.ensure',            () => lib('loans')(pool, { nextSeq: async () => 'X' }).ensure()],
+    ['budgets.ensure',          () => lib('budgets')(pool).ensure()],
+    ['cashflow.ensure',         () => lib('cashflow')(pool).ensure()],
+    ['profitability.ensure',    () => lib('profitability')(pool).ensure()],
+    ['shade-approvals.ensure',  () => lib('shade-approvals')(pool).ensure()],
+    ['morning-briefing.ensure', () => lib('morning-briefing')(pool).ensure()],
+    ['token-revocation.init',   () => lib('token-revocation').init(pool)],
+    ['wa-approvals.seedDefaults',() => lib('wa-approvals')(pool).seedDefaults()],
+  ];
+  for (const [name, fn] of bootSteps) {
+    try { await fn(); mark(name, 'OK'); } catch (e) { mark(name, 'FAIL', String(e.message).slice(0, 100)); }
+  }
 
   // Summary.
   const r = await pool.query(`SELECT count(*)::int n FROM information_schema.tables WHERE table_schema='public'`);

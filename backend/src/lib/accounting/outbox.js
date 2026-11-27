@@ -125,6 +125,21 @@ module.exports = (pool) => {
       return { outbox_id: outboxId, action: canPost ? 'posted' : 'drafted', mode: m, voucher_id: draft.voucher_id,
         voucher_no: voucher.voucher_no || null, status: voucher.status, replay: !!draft.idempotent_replay };
     } catch (e) {
+      // Lost-race recovery: concurrent processors of the same event can collide
+      // on the voucher idempotency key (check-then-insert). If a voucher for this
+      // key already exists, another processor won — this is an idempotent success,
+      // not a failure. Mark the row PROCESSED with the winning voucher and return
+      // it, instead of corrupting its status to FAILED and rejecting.
+      const won = (await pool.query(
+        `SELECT voucher_id, voucher_no, status FROM acct.vouchers WHERE company_id=$1 AND idempotency_key=$2`,
+        [c, key]).catch(() => ({ rows: [] }))).rows[0];
+      if (won) {
+        await pool.query(
+          `UPDATE acct.mes_event_outbox SET status='PROCESSED', voucher_id=$2, processed_at=now(), last_error=NULL WHERE outbox_id=$1`,
+          [outboxId, won.voucher_id]).catch(() => {});
+        return { outbox_id: outboxId, action: m === 'POST' ? 'posted' : 'drafted', mode: m,
+          voucher_id: won.voucher_id, voucher_no: won.voucher_no || null, status: won.status, replay: true };
+      }
       await pool.query(`UPDATE acct.mes_event_outbox SET status='FAILED', last_error=$2 WHERE outbox_id=$1`, [outboxId, e.message]).catch(() => {});
       throw e;
     }
