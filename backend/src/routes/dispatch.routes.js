@@ -12,12 +12,13 @@ const makeController = require('../controllers/dispatch.controller');
 
 module.exports = ({ pool, verifyToken, requireRole, nextSeq, numOrNull, postToLedger, autoInvoice }) => {
   const router = express.Router();
+  const busyEvents = require('../lib/busy/operational-events')(pool);  // Phase 2.1 — flag-OFF by default
   const controller = makeController(
     makeService(makeRepository(pool, { postToLedger }), { nextSeq, numOrNull, autoInvoice })
   );
 
   router.get('/', controller.list);
-  router.post('/', verifyToken, requireRole('SUPERVISOR'), controller.create);
+  router.post('/', verifyToken, requireRole('SUPERVISOR'), busyEvents.captureMw('dispatch'), controller.create);
   router.get('/:id', controller.get);
   router.post('/:id/jobwork-return', verifyToken, requireRole('SUPERVISOR'), controller.jobworkReturn);
   router.delete('/:id', verifyToken, requireRole('ADMIN'), controller.remove);

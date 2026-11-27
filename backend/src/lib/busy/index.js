@@ -22,7 +22,7 @@ module.exports = (pool, opts = {}) => {
     ? opts.connector                       // test can inject a pre-built adapter
     : selectConnector(pool, opts);
   const mapping = makeMapping(pool);
-  const queue = makeQueue(pool, connector);
+  const queue = makeQueue(pool, connector, mapping);
 
   async function ensure() { return schema.ensure(); }
 

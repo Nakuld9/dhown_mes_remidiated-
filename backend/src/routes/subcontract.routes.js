@@ -10,6 +10,7 @@
 const express = require('express');
 
 module.exports = ({ pool, verifyToken, requireRole, nextSeq, addCostEntry, postToLedger, generateQR, rollQRContent, getYarnRate }) => {
+  const busyEvents = require('../lib/busy/operational-events')(pool);  // Phase 2.1 — flag-OFF by default
   const router = express.Router();
 
 router.get('/challans', async (req, res) => {
@@ -33,7 +34,7 @@ router.get('/challans', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/challans', verifyToken, requireRole('SUPERVISOR'), async (req, res) => {
+router.post('/challans', verifyToken, requireRole('SUPERVISOR'), busyEvents.captureMw('party_issue'), async (req, res) => {
   const client = await pool.connect();
   try {
     const { batch_id, vendor_name, vendor_contact, job_type, sent_date, expected_return_date, rate_per_kg, notes, items } = req.body;
@@ -314,7 +315,7 @@ router.get('/challans/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/challans/:id/receive', verifyToken, requireRole('SUPERVISOR'), async (req, res) => {
+router.post('/challans/:id/receive', verifyToken, requireRole('SUPERVISOR'), busyEvents.captureMw('party_recovery'), async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;

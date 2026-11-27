@@ -12,7 +12,7 @@ const MAX_ATTEMPTS = parseInt(process.env.BUSY_MAX_ATTEMPTS || '5');
 const BACKOFF_BASE_MS = parseInt(process.env.BUSY_BACKOFF_BASE_MS || '1000');
 const BACKOFF_CAP_MS = parseInt(process.env.BUSY_BACKOFF_CAP_MS || '3600000');
 
-module.exports = (pool, connector) => {
+module.exports = (pool, connector, mapping = null) => {
   async function audit(row, final_status, extra = {}) {
     await pool.query(
       `INSERT INTO busy_audit_log (queue_id, entity_type, dhown_entity_id, external_reference, operation,
@@ -70,6 +70,18 @@ module.exports = (pool, connector) => {
 
     const row = await claim(id);
     if (!row) return { ok: false, status: current.status, row: current, note: 'not claimable (terminal or in flight)' };
+
+    // Reject an event that references an unmapped warehouse/material-centre BEFORE
+    // any push. This is an INTEGRATION-side rejection (→ MANUAL_REVIEW) — it never
+    // touched the business write, which already committed. No auto-create/remap.
+    if (mapping && row.payload && row.payload.warehouse_code) {
+      try { await mapping.requireBusyId('WAREHOUSE', row.payload.warehouse_code); }
+      catch (e) {
+        const out = await finish(id, 'MANUAL_REVIEW', { error_code: e.code || 'MAP_MISSING', error_message: e.message, next_retry_at: null });
+        await audit(row, 'MANUAL_REVIEW', { error_code: e.code || 'MAP_MISSING', error_message: e.message });
+        return { ok: false, status: 'MANUAL_REVIEW', row: out, error: e.message };
+      }
+    }
 
     let res;
     try {

@@ -8,6 +8,7 @@ const makeController = require('../controllers/purchase-orders.controller');
 
 module.exports = ({ pool, verifyToken, requireRole, nextDocNumber, io }) => {
   const router = express.Router();
+  const busyEvents = require('../lib/busy/operational-events')(pool);  // Phase 2.1 — flag-OFF by default
 
   // Every route below requires a valid session. Applied at router level so a
   // route added later is guarded by default; individual routes add requireRole
@@ -18,7 +19,7 @@ module.exports = ({ pool, verifyToken, requireRole, nextDocNumber, io }) => {
 
   router.get('/', controller.list);
   router.get('/:id', controller.get);
-  router.post('/', verifyToken, requireRole('SUPERVISOR'), controller.create);
+  router.post('/', verifyToken, requireRole('SUPERVISOR'), busyEvents.captureMw('purchase'), controller.create);
   router.put('/:id', verifyToken, requireRole('SUPERVISOR'), controller.updateHeader);
   router.put('/:id/send', verifyToken, requireRole('SUPERVISOR'), controller.send);
   router.put('/:id/partial', verifyToken, requireRole('SUPERVISOR'), controller.partial);

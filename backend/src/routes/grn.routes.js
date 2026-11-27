@@ -18,6 +18,7 @@ const makeController = require('../controllers/grn.controller');
 
 module.exports = ({ pool, verifyToken, requireRole, nextInvSeq, addCostEntry, postToLedger, io }) => {
   const router = express.Router();
+  const busyEvents = require('../lib/busy/operational-events')(pool);  // Phase 2.1 — flag-OFF by default
 
   // Every route below requires a session. Applied at router level so a route
   // added later is guarded by default.
@@ -28,7 +29,7 @@ module.exports = ({ pool, verifyToken, requireRole, nextInvSeq, addCostEntry, po
   );
 
   router.get('/', controller.list);
-  router.post('/', verifyToken, requireRole('SUPERVISOR'), controller.create);
+  router.post('/', verifyToken, requireRole('SUPERVISOR'), busyEvents.captureMw('grn_receipt'), controller.create);
   router.get('/:id', controller.get);
   router.post('/:id/lots', verifyToken, requireRole('SUPERVISOR'), controller.addLot);
   // These two were carried over as public "as in original". Approving a goods
