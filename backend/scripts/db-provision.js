@@ -112,6 +112,7 @@ const LEGACY_FIRST = ['migration_erp_phase0a.js','migration_erp_phase0b.js','mig
     ['profitability.ensure',    () => lib('profitability')(pool).ensure()],
     ['shade-approvals.ensure',  () => lib('shade-approvals')(pool).ensure()],
     ['morning-briefing.ensure', () => lib('morning-briefing')(pool).ensure()],
+    ['busy-integration.ensure', () => lib('busy')(pool).ensure()],
     ['token-revocation.init',   () => lib('token-revocation').init(pool)],
     ['wa-approvals.seedDefaults',() => lib('wa-approvals')(pool).seedDefaults()],
   ];

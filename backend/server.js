@@ -1013,6 +1013,7 @@ server.listen(APP_PORT, async () => {
   // The trailing .catch keeps one failed step from stopping the rest of boot.
   await withDbRetry('ai-audit', () => require('./src/lib/audit')(pool).ensure()).catch(() => {});
   await withDbRetry('busy-bridge', () => require('./src/lib/busy-bridge')(pool).ensure()).catch(() => {});
+  await withDbRetry('busy-integration', () => require('./src/lib/busy')(pool).ensure()).catch(() => {});
   await withDbRetry('wa-campaigns', () => waCampaigns.ensure()).catch(() => {});
   await withDbRetry('error-tracker', () => errorTracker.ensure()).catch(() => {});
   await withDbRetry('ci', () => ci.ensure()).catch(() => {});
