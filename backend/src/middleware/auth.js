@@ -2,6 +2,7 @@
 // and the login/PIN rate limiters.
 
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const revocation = require("../lib/token-revocation");
 // Normalises an IP before it is used as a rate-limit key. See aiLimiter below.
@@ -145,17 +146,31 @@ function auditorWriteBlock(req, res, next) {
   next();
 }
 
+// Constant-time key comparison (remediation: dcApiKeyGuard hardening).
+// Hashing both sides to a fixed 32-byte digest before timingSafeEqual means the
+// comparison is constant-time AND safe for unequal-length inputs (timingSafeEqual
+// throws on length mismatch; equal-length digests never do), without leaking the
+// key length via early return. Never logs either value.
+function dcKeysEqual(provided, expected) {
+  if (typeof provided !== 'string' || typeof expected !== 'string') return false;
+  const a = crypto.createHash('sha256').update(provided).digest();
+  const b = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+// DC ingest guard — FAILS CLOSED (remediation: dcApiKeyGuard hardening).
+//   * No/empty DC_API_KEY  → 503 (ingestion is never left unauthenticated).
+//   * Credential accepted via the `x-api-key` HEADER ONLY; query-string keys are
+//     rejected (they leak through proxy/access logs).
+//   * Missing/wrong key    → 401, never reaching the protected route.
+//   * Constant-time compare; credential values are never logged.
 function dcApiKeyGuard(req, res, next) {
   const expected = process.env.DC_API_KEY;
-  if (!expected) {
-    if (!dcApiKeyWarned) {
-      console.warn('[SECURITY] /api/live-data is UNAUTHENTICATED — set DC_API_KEY in .env to require an API key from data collectors');
-      dcApiKeyWarned = true;
-    }
-    return next();
+  if (!expected || !expected.trim()) {
+    return res.status(503).json({ error: 'Data-collector ingestion is not configured' });
   }
-  const provided = req.get('x-api-key') || req.query.api_key;
-  if (provided !== expected) {
+  const provided = req.get('x-api-key');
+  if (!provided || !dcKeysEqual(provided, expected)) {
     return res.status(401).json({ error: 'Invalid or missing API key' });
   }
   return next();
